@@ -30,13 +30,6 @@ pip install -r requirements.txt
 streamlit run frontend/app_video.py
 ```
 
-### CLI
-```bash
-python main.py --video data/videos/traffic.mp4
-python main.py --video data/videos/traffic.mp4 --weather rain --temp 12 --visibility 3
-python main.py --help
-```
-
 ## UI Tabs
 
 | Tab | What it does |
