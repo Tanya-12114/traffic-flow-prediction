@@ -1018,7 +1018,7 @@ with tab_live:
                 s2.metric(":material/bar_chart: Avg Density",             f"{avg_d:.3f}")
                 s3.metric(":material/arrow_upward: Peak Vehicles",         max_v)
                 s4.metric(":material/directions_car: Avg Vehicles/frame",  f"{avg_v:.1f}")
-
+                ## 
                 # ── Unique vehicle type totals for the session ─────────────
                 # Use last_state unique_counts if available (needs updated live_camera.py)
                 # Falls back to per-frame peak counts if old live_camera.py is loaded
