@@ -367,9 +367,9 @@ def run_video_pipeline(video_path, clip_len, fps_keep, resize_h,
             preds.append(model(X.unsqueeze(0)).item())
             trues.append(y.item())
 
-    # ── FIX 2: Unique vehicle tracking — fast path ────────────────────────────
+    # ── FIX 2: Unique vehicle tracking— fast path ────────────────────────────
     # Original called count_unique_vehicles(fps_keep=1) which ran YOLO on EVERY
-    # frame. Fix: auto frame-skip to ~4 fps + downscale frames to 640px wide.
+    # frame. Fix: auto frame-skip to ~4 fps+ downscale frames to 640px wide.
     # Also passes target_fps & max_width instead of the old fps_keep=1.
     unique_counts = None
     if yolo_ok and counts_per_frame:
