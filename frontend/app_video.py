@@ -367,9 +367,9 @@ def run_video_pipeline(video_path, clip_len, fps_keep, resize_h,
             preds.append(model(X.unsqueeze(0)).item())
             trues.append(y.item())
 
-    # ── FIX 2: Unique vehicle tracking — fast path ────────────────────────────
+    # ── FIX 2: Unique vehicle tracking— fast path ────────────────────────────
     # Original called count_unique_vehicles(fps_keep=1) which ran YOLO on EVERY
-    # frame. Fix: auto frame-skip to ~4 fps + downscale frames to 640px wide.
+    # frame. Fix: auto frame-skip to ~4 fps+ downscale frames to 640px wide.
     # Also passes target_fps & max_width instead of the old fps_keep=1.
     unique_counts = None
     if yolo_ok and counts_per_frame:
@@ -1018,7 +1018,7 @@ with tab_live:
                 s2.metric(":material/bar_chart: Avg Density",             f"{avg_d:.3f}")
                 s3.metric(":material/arrow_upward: Peak Vehicles",         max_v)
                 s4.metric(":material/directions_car: Avg Vehicles/frame",  f"{avg_v:.1f}")
-
+                ## 
                 # ── Unique vehicle type totals for the session ─────────────
                 # Use last_state unique_counts if available (needs updated live_camera.py)
                 # Falls back to per-frame peak counts if old live_camera.py is loaded
