@@ -52,3 +52,8 @@ streamlit run frontend/app_video.py
 numpy<2  torch  scikit-learn  pykalman  pandas
 opencv-python  ultralytics  streamlit  plotly  yt-dlp  pyyaml
 ```
+## Deployment URL
+
+```
+https://traffic-flow-predictiongit-9htch7xmiunmntxv6esmju.streamlit.app/
+```
