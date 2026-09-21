@@ -54,4 +54,4 @@ opencv-python  ultralytics  streamlit  plotly  yt-dlp  pyyaml
 ```
 ## Deployment URL
 
-[https://traffic-flow-predictiongit-9htch7xmiunmntxv6esmju.streamlit.app/](https://traffic-flow-predictiongit-9htch7xmiunmntxv6esmju.streamlit.app/)
+[https://traffic-flow-predictiongit-7jsokhdenoixm8quspv3mh.streamlit.app/](https://traffic-flow-predictiongit-7jsokhdenoixm8quspv3mh.streamlit.app/)
