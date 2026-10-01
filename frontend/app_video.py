@@ -25,50 +25,197 @@ from video_pipeline.live_camera     import LiveCameraStream, RealTimePredictor
 
 # ── Page config ───────────────────────────────────────────────
 st.set_page_config(
-    page_title = "Traffic Flow Prediction",
+    page_title = "Traffic Density Forecasting",
     layout     = "wide",
     page_icon  = ":material/traffic:",
 )
 
 st.markdown("""
 <style>
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; }
-    h1 { font-size: 1.75rem !important; font-weight: 700; }
-    h2 { font-size: 1.1rem !important; font-weight: 600; margin-top: 1rem; color: #333; }
-    [data-testid="stMetricValue"] { font-size: 1.35rem !important; font-weight: 600; }
-    [data-testid="stMetricLabel"] { font-size: 0.76rem !important; color: #777; }
-    .stTabs [data-baseweb="tab"] { font-size: 0.88rem; padding: 0.45rem 1.1rem; }
-    section[data-testid="stSidebar"] { display: none; }
-    hr { margin: 0.8rem 0; }
-    /* Traffic badge card */
-    .traffic-badge-card {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 0.7rem 1rem;
-    }
-    .traffic-badge-label {
-        font-size: 0.72rem;
-        font-weight: 500;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #94a3b8;
-        margin-bottom: 0.3rem;
-    }
-    .traffic-badge-value {
-        font-size: 1.35rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root {
+    --asphalt: #0E1116;
+    --panel:   #161B22;
+    --edge:    #252C37;
+    --ink:     #E8ECF2;
+    --muted:   #8B95A5;
+    --line:    #FFB400;   /* road-marking yellow */
+}
+.stApp { font-family: 'IBM Plex Sans', sans-serif; }
+.block-container { padding-top: 1.4rem; padding-bottom: 1rem; max-width: 100% !important;
+    padding-left: 2.5rem !important; padding-right: 2.5rem !important; }
+header[data-testid="stHeader"] { background: transparent; }
+section[data-testid="stSidebar"] { display: none; }
+hr { margin: 0.8rem 0; border-color: var(--edge); }
+
+/* ── Hero ── */
+.stMarkdown .hero {
+    position: relative; overflow: hidden;
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 2rem 3rem; align-items: center; align-content: center;
+    min-height: 62vh; padding: 3rem 3.2rem 4.4rem; margin-bottom: 1.8rem;
+    border: 1px solid var(--edge); border-radius: 16px;
+    background:
+        radial-gradient(1000px 420px at 0% 0%, rgba(255,180,0,0.12), transparent 60%),
+        radial-gradient(800px 420px at 100% 100%, rgba(34,197,94,0.07), transparent 60%),
+        linear-gradient(180deg, #181E28 0%, #12161D 100%);
+}
+.stMarkdown .hero .hero-title {
+    font-family: 'Sora', sans-serif; font-weight: 700;
+    font-size: clamp(2rem, 3.6vw, 3.2rem); line-height: 1.12;
+    letter-spacing: -0.01em; margin: 0 !important; color: var(--ink);
+}
+.stMarkdown .hero .hero-sub {
+    color: var(--muted); max-width: 48ch; font-size: 1.1rem; line-height: 1.65;
+    margin: 1.4rem 0 0 !important;
+}
+.stMarkdown .hero p.hero-sub.hero-cta { color: var(--line); font-weight: 500; font-size: 1rem; margin-top: 1.1rem !important; }
+
+/* forecast preview card */
+.hero .viz {
+    background: rgba(10,13,17,0.55); border: 1px solid var(--edge);
+    border-radius: 12px; padding: 1rem 1.2rem 0.8rem;
+}
+.hero .viz-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.3rem; }
+.hero .viz-head b { font-family: 'Sora', sans-serif; font-size: 0.98rem; color: var(--ink); font-weight: 600; }
+.hero .viz-head span { font-size: 0.78rem; color: var(--muted); }
+.hero .viz svg { width: 100%; height: auto; display: block; }
+.fc-obs  { stroke-dasharray: 1; stroke-dashoffset: 1; animation: fc-draw 2.2s ease-out 0.3s forwards; }
+.fc-pred { opacity: 0; animation: fc-fade 0.9s ease-out 2.2s forwards; }
+@keyframes fc-draw { to { stroke-dashoffset: 0; } }
+@keyframes fc-fade { to { opacity: 1; } }
+
+/* feature tiles */
+.hero .tiles { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.hero .tile {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--edge);
+    border-top: 3px solid var(--line); border-radius: 10px; padding: 0.9rem 1.1rem;
+}
+.hero .tile b { display: block; font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+.hero .tile span { display: block; margin-top: 0.3rem; font-size: 0.85rem; line-height: 1.5; color: var(--muted); }
+
+/* road strip */
+.road {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: #090C10;
+    border-top: 2px solid rgba(255,255,255,0.22);
+}
+.road::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 9px; height: 4px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 32px, transparent 32px 64px);
+    background-size: 64px 4px; animation: drift 2.4s linear infinite;
+}
+@keyframes drift { to { background-position: 64px 0; } }
+@media (prefers-reduced-motion: reduce) {
+    .road::after { animation: none; }
+    .fc-obs { animation: none; stroke-dashoffset: 0; }
+    .fc-pred { animation: none; opacity: 1; }
+}
+@media (max-width: 1000px) { .hero .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px)  { .stMarkdown .hero { grid-template-columns: 1fr; min-height: 0; padding: 2rem 1.4rem 3.2rem; } }
+@media (max-width: 560px)  { .hero .tiles { grid-template-columns: 1fr; } }
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] { gap: 0.25rem; border-bottom: 1px solid var(--edge); }
+.stTabs [data-baseweb="tab"] {
+    font-size: 0.92rem; padding: 0.6rem 1.15rem;
+    border-radius: 8px 8px 0 0; color: var(--muted);
+}
+.stTabs [data-baseweb="tab"]:hover { color: var(--ink); background: rgba(255,255,255,0.03); }
+.stTabs [aria-selected="true"] { color: var(--ink); background: rgba(255,180,0,0.08); }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--line); height: 3px; }
+
+/* ── Section headings ── */
+.stMarkdown h4 {
+    font-family: 'Sora', sans-serif; font-size: 1.02rem !important; font-weight: 600;
+    padding-left: 0.7rem; border-left: 3px solid var(--line);
+    margin: 0.4rem 0 0.9rem; color: var(--ink);
+}
+h2 { font-size: 1.1rem !important; font-weight: 600; margin-top: 1rem; }
+
+/* ── Inputs ── */
+[data-baseweb="input"] > div, [data-baseweb="select"] > div, [data-baseweb="textarea"] {
+    background: var(--panel) !important; border: 1px solid var(--edge) !important; border-radius: 8px !important;
+}
+[data-baseweb="input"] > div:focus-within, [data-baseweb="select"] > div:focus-within {
+    border-color: var(--line) !important;
+}
+
+/* ── Buttons ── */
+button[data-testid="stBaseButton-primary"], .stButton > button[kind="primary"] {
+    background: var(--line); color: #14110A; border: 0; font-weight: 600; border-radius: 8px;
+}
+button[data-testid="stBaseButton-primary"]:hover, .stButton > button[kind="primary"]:hover {
+    background: var(--line); color: #14110A; filter: brightness(1.1);
+}
+button[data-testid="stBaseButton-secondary"], .stButton > button[kind="secondary"] {
+    border-radius: 8px; border: 1px solid var(--edge); background: var(--panel);
+}
+button[data-testid="stBaseButton-secondary"]:hover { border-color: var(--line); color: var(--ink); }
+
+/* ── Metrics, alerts, expanders ── */
+[data-testid="stMetric"] {
+    background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 10px; padding: 0.7rem 1rem;
+}
+[data-testid="stMetricValue"] { font-family: 'Sora', sans-serif; font-size: 1.3rem !important; font-weight: 600; }
+[data-testid="stMetricLabel"] { font-size: 0.76rem !important; color: var(--muted); }
+[data-testid="stAlert"] {
+    background: var(--panel); border: 1px dashed #3A4453; border-radius: 10px; color: var(--ink);
+}
+[data-testid="stExpander"] { border: 1px solid var(--edge); border-radius: 10px; background: var(--panel); }
+
+/* ── Traffic badge card ── */
+.traffic-badge-card {
+    background: var(--panel); border: 1px solid var(--edge);
+    border-radius: 10px; padding: 0.7rem 1rem;
+}
+.traffic-badge-label { font-size: 0.76rem; font-weight: 500; color: var(--muted); margin-bottom: 0.3rem; }
+.traffic-badge-value {
+    font-family: 'Sora', sans-serif; font-size: 1.3rem; font-weight: 700;
+    display: flex; align-items: center; gap: 0.4rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ── Header ────────────────────────────────────────────────────
-st.title(":material/traffic: Traffic Flow Prediction")
-st.caption("CNN-BiLSTM  ·  YOLO11 Vehicle Detection  ·  Kalman Smoothing  ·  GNN Fusion  ·  Live Camera")
-st.divider()
+st.markdown("""
+<div class="hero">
+<div>
+<div class="hero-title">Real-Time Spatio-Temporal<br>Traffic Density Forecasting</div>
+<p class="hero-sub">Turn traffic video into a congestion forecast. Paste a YouTube link, upload a clip, or connect a live camera.</p>
+<p class="hero-sub hero-cta">Choose a video source in the tabs below to begin.</p>
+</div>
+<div class="viz">
+<div class="viz-head"><b>Density forecast</b><span>Illustrative example</span></div>
+<svg viewBox="0 0 620 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Illustration of traffic density over time with a forecast">
+<rect x="20" y="15" width="520" height="70" fill="#ef4444" opacity="0.07"/>
+<rect x="20" y="85" width="520" height="70" fill="#f59e0b" opacity="0.07"/>
+<rect x="20" y="155" width="520" height="70" fill="#22c55e" opacity="0.07"/>
+<text x="550" y="54" fill="#8B95A5" font-size="12">High</text>
+<text x="550" y="124" fill="#8B95A5" font-size="12">Moderate</text>
+<text x="550" y="194" fill="#8B95A5" font-size="12">Low</text>
+<line x1="20" y1="225" x2="540" y2="225" stroke="#252C37" stroke-width="1"/>
+<line x1="330" y1="15" x2="330" y2="225" stroke="#3A4453" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="26" y="243" fill="#8B95A5" font-size="12">Past</text>
+<text x="336" y="243" fill="#FFB400" font-size="12">Forecast</text>
+<g class="fc-pred">
+<path d="M330,72 C370,52 400,32 440,52 S510,98 540,84 L540,138 C515,150 475,104 440,94 C400,84 370,76 330,72 Z" fill="#FFB400" opacity="0.14"/>
+<path d="M330,72 C370,62 400,45 440,70 S510,120 540,110" fill="none" stroke="#FFB400" stroke-width="3" stroke-dasharray="7 6" stroke-linecap="round"/>
+<circle cx="540" cy="110" r="5" fill="#FFB400"/>
+</g>
+<path class="fc-obs" pathLength="1" d="M20,190 C60,180 80,150 110,155 S160,205 190,172 S250,92 290,100 S320,70 330,72" fill="none" stroke="#E8ECF2" stroke-width="3" stroke-linecap="round"/>
+<circle cx="330" cy="72" r="5" fill="#E8ECF2"/>
+</svg>
+</div>
+<div class="tiles">
+<div class="tile"><b>Count by vehicle type</b><span>Cars, trucks, buses and motorcycles, each counted once.</span></div>
+<div class="tile"><b>Incident alerts</b><span>Stopped vehicles, density spikes, sudden clearance and congestion.</span></div>
+<div class="tile"><b>Learns while live</b><span>The model keeps fine-tuning as the camera stream runs.</span></div>
+<div class="tile"><b>Multi-camera view</b><span>Try density fusion across a simulated road network.</span></div>
+</div>
+<div class="road"></div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
