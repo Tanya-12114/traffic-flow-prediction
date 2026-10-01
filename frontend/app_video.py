@@ -254,8 +254,8 @@ def _render_traffic_metric(col, label_md, v):
 </div>""", unsafe_allow_html=True)
 
 
-def settings_panel(key_prefix):
-    """Renders model + YOLO settings inside a tab's left column."""
+def model_panel(key_prefix):
+    """Model settings (rendered inside one column of the horizontal settings row)."""
     st.markdown("#### :material/settings: Model Settings")
     clip_len = st.slider("Clip length",      4,  24, 12, key=f"{key_prefix}_clip",
                          help="Number of frames per training clip")
@@ -265,7 +265,11 @@ def settings_panel(key_prefix):
                                 key=f"{key_prefix}_rsz")
     use_flow = st.checkbox("Optical flow channel", value=True, key=f"{key_prefix}_flow")
     epochs   = st.slider("Training epochs",  5,  50, 15, key=f"{key_prefix}_ep")
+    return clip_len, fps_keep, resize_h, use_flow, epochs
 
+
+def yolo_panel(key_prefix):
+    """YOLO11 settings (rendered inside one column of the horizontal settings row)."""
     st.markdown("#### :material/manage_search: YOLO11 Detection")
     use_yolo  = st.checkbox("Enable YOLO11", value=True, key=f"{key_prefix}_yolo")
     yolo_conf = st.slider("Confidence threshold", 0.1, 0.9, 0.3,
@@ -274,8 +278,7 @@ def settings_panel(key_prefix):
                              ["n — nano (fastest)", "s — small", "m — medium"],
                              index=0, key=f"{key_prefix}_sz",
                              disabled=not use_yolo)[0]
-
-    return clip_len, fps_keep, resize_h, use_flow, epochs, use_yolo, yolo_conf, yolo_size
+    return use_yolo, yolo_conf, yolo_size
 
 
 def show_vehicle_counts(unique_counts, counts_per_frame, summary):
@@ -555,32 +558,36 @@ tab_yt, tab_upload, tab_gnn, tab_live = st.tabs([
 
 # ── YouTube ───────────────────────────────────────────────────
 with tab_yt:
-    col_l, col_r = st.columns([1, 2])
-    with col_l:
+    # Settings laid out side by side
+    c_src, c_model, c_yolo = st.columns(3)
+    with c_src.container(border=True):
         st.markdown("#### :material/link: Video Source")
         yt_url  = st.text_input("YouTube URL",
                                 placeholder="https://www.youtube.com/watch?v=…",
                                 key="yt_url")
         yt_name = st.text_input("Save as", placeholder="traffic_video", key="yt_name")
         yt_res  = st.select_slider("Resolution", [360, 480, 720], value=480, key="yt_res")
+    with c_model.container(border=True):
+        clip_len, fps_keep, resize_h, use_flow, epochs = model_panel("yt")
+    with c_yolo.container(border=True):
+        use_yolo, yolo_conf, yolo_size = yolo_panel("yt")
 
-        st.markdown("---")
-        clip_len, fps_keep, resize_h, use_flow, epochs, use_yolo, yolo_conf, yolo_size = \
-            settings_panel("yt")
+    run_yt = st.button(":material/download: Download & Predict", type="primary", key="run_yt",
+                       use_container_width=True)
 
-        run_yt = st.button(":material/download: Download & Predict", type="primary", key="run_yt",
-                           use_container_width=True)
-
-        saved = list(Path("data/videos").glob("*.mp4")) + \
-                list(Path("data/videos").glob("*.avi"))
-        if saved:
-            st.markdown("---")
-            st.markdown("##### :material/folder_open: Saved videos")
-            for v in saved:
-                if st.button(f":material/play_arrow: {v.name}", key=f"prev_{v.name}", use_container_width=True):
+    saved = list(Path("data/videos").glob("*.mp4")) + \
+            list(Path("data/videos").glob("*.avi"))
+    if saved:
+        with st.expander(":material/folder_open: Saved videos", expanded=False):
+            sv_cols = st.columns(min(4, len(saved)))
+            for i, v in enumerate(saved):
+                if sv_cols[i % len(sv_cols)].button(f":material/play_arrow: {v.name}",
+                                                    key=f"prev_{v.name}",
+                                                    use_container_width=True):
                     st.session_state["yt_path"] = str(v)
 
-    with col_r:
+    # Results / status area, full width below the settings
+    with st.container():
         Path("data/videos").mkdir(parents=True, exist_ok=True)
         vpath = st.session_state.get("yt_path")
 
@@ -598,7 +605,7 @@ with tab_yt:
                         st.error(f"Download failed: {e}"); vpath = None
 
         if vpath and Path(vpath).exists():
-            st.video(vpath)
+            st.columns([3, 2])[0].video(vpath)
             if run_yt:
                 st.divider()
                 run_video_pipeline(vpath, clip_len, fps_keep, resize_h,
@@ -609,22 +616,24 @@ with tab_yt:
 
 # ── Upload Video ──────────────────────────────────────────────
 with tab_upload:
-    col_l, col_r = st.columns([1, 2])
-    with col_l:
+    c_src, c_model, c_yolo = st.columns(3)
+    with c_src.container(border=True):
         st.markdown("#### :material/upload_file: Upload a Video File")
         vid_file = st.file_uploader("Choose file (.mp4 · .avi · .mov)",
                                     type=["mp4","avi","mov"], key="up_file")
-        st.markdown("---")
-        clip_len, fps_keep, resize_h, use_flow, epochs, use_yolo, yolo_conf, yolo_size = \
-            settings_panel("up")
-        run_up = st.button(":material/play_arrow: Run Prediction", type="primary", key="run_up",
-                           use_container_width=True, disabled=vid_file is None)
+    with c_model.container(border=True):
+        clip_len, fps_keep, resize_h, use_flow, epochs = model_panel("up")
+    with c_yolo.container(border=True):
+        use_yolo, yolo_conf, yolo_size = yolo_panel("up")
 
-    with col_r:
+    run_up = st.button(":material/play_arrow: Run Prediction", type="primary", key="run_up",
+                       use_container_width=True, disabled=vid_file is None)
+
+    with st.container():
         if vid_file is None:
             st.info("Upload a traffic video to get started.")
         else:
-            st.video(vid_file)
+            st.columns([3, 2])[0].video(vid_file)
             if run_up:
                 sfx = Path(vid_file.name).suffix
                 with tempfile.NamedTemporaryFile(delete=False, suffix=sfx) as tmp:
@@ -637,29 +646,36 @@ with tab_upload:
 
 # ── GNN Fusion ────────────────────────────────────────────────
 with tab_gnn:
-    col_l, col_r = st.columns([1, 2])
-    with col_l:
+    c_setup, c_cams = st.columns([1, 3])
+    with c_setup.container(border=True):
         st.markdown("#### :material/hub: Road Network Setup")
         st.caption("Each camera = node. Cameras within the distance threshold = connected.")
         n_cams   = st.slider("Number of cameras", 2, 6, 3, key="gnn_n")
         max_dist = st.slider("Connection threshold (km)", 0.5, 10.0, 2.0, key="gnn_d")
 
-        st.markdown("---")
-        cam_data = []
-        for i in range(n_cams):
-            with st.expander(f":material/videocam: Camera {i+1}", expanded=(i == 0)):
-                lat  = st.number_input("Latitude",  value=round(28.61+i*0.015,4),
-                                       key=f"lat{i}", format="%.4f")
-                lon  = st.number_input("Longitude", value=round(77.20+i*0.015,4),
-                                       key=f"lon{i}", format="%.4f")
-                dens = st.slider("Current density", 0.0, 1.0, round(0.2+i*0.2,1),
-                                 key=f"dens{i}", step=0.05)
-                cam_data.append({"lat":lat,"lon":lon,"density":dens})
+    cam_data = []
+    with c_cams.container(border=True):
+        st.markdown("#### :material/videocam: Cameras")
+        per_row = 3
+        for r0 in range(0, n_cams, per_row):
+            row_cols = st.columns(per_row)
+            for j in range(per_row):
+                i = r0 + j
+                if i >= n_cams:
+                    break
+                with row_cols[j].expander(f":material/videocam: Camera {i+1}", expanded=(i == 0)):
+                    lat  = st.number_input("Latitude",  value=round(28.61+i*0.015,4),
+                                           key=f"lat{i}", format="%.4f")
+                    lon  = st.number_input("Longitude", value=round(77.20+i*0.015,4),
+                                           key=f"lon{i}", format="%.4f")
+                    dens = st.slider("Current density", 0.0, 1.0, round(0.2+i*0.2,1),
+                                     key=f"dens{i}", step=0.05)
+                    cam_data.append({"lat":lat,"lon":lon,"density":dens})
 
-        run_gnn = st.button(":material/play_arrow: Run GNN Fusion", type="primary", key="run_gnn",
-                            use_container_width=True)
+    run_gnn = st.button(":material/play_arrow: Run GNN Fusion", type="primary", key="run_gnn",
+                        use_container_width=True)
 
-    with col_r:
+    with st.container():
         if run_gnn:
             locs       = [{"lat":c["lat"],"lon":c["lon"]} for c in cam_data]
             raw_dens   = [c["density"] for c in cam_data]
@@ -708,7 +724,7 @@ with tab_gnn:
                 st.map(pd.DataFrame([{"lat":c["lat"],"lon":c["lon"]}
                                      for c in cam_data]))
         else:
-            st.info("Configure cameras on the left and click **Run GNN Fusion**.")
+            st.info("Configure cameras above and click **Run GNN Fusion**.")
             st.markdown("""
 **How it works:**
 
@@ -723,7 +739,8 @@ This mirrors how real congestion spreads through a road network.
 
 # ── Live Camera ───────────────────────────────────────────────
 with tab_live:
-    col_l, col_r = st.columns([1, 3])
+    c_src, c_det, c_adv = st.columns(3)
+    col_l = c_src.container(border=True)
     with col_l:
         st.markdown("#### :material/videocam: Camera Source")
         src_type = st.radio("Type", [
@@ -784,7 +801,7 @@ with tab_live:
             except Exception:
                 pass
 
-        st.markdown("---")
+    with c_det.container(border=True):
         st.markdown("#### :material/manage_search: Detection Settings")
         live_conf = st.slider("YOLO11 confidence", 0.1, 0.9, 0.35, key="lconf")
         live_maxv = st.slider("Max vehicles (→ density 1.0)", 5, 50, 20, key="lmaxv")
@@ -792,7 +809,9 @@ with tab_live:
                               help="Higher = faster display, lower detection rate")
         # Duration removed — stream runs until Stop is pressed
 
-        # ── Feature C: online learning toggle ────────────────────────────
+    # ── Feature C: online learning toggle (third column) ─────────────
+    with c_adv.container(border=True):
+        st.markdown("#### :material/tune: Adaptive & Alerts")
         with st.expander(":material/model_training: Online Learning", expanded=False):
             use_online = st.checkbox("Enable adaptive retraining", value=False,
                                      key="live_online",
@@ -815,18 +834,18 @@ with tab_live:
                                     key="live_alert_spike",
                                     help="Rise over last 5 readings triggers a SPIKE alert")
 
-        # ── Start button ─────────────────────────────────────────────────────
-        if "stream_running" not in st.session_state:
-            st.session_state["stream_running"] = False
+    # ── Start button (full width, below the settings row) ────────────────
+    if "stream_running" not in st.session_state:
+        st.session_state["stream_running"] = False
 
-        no_source = (("Video File" in src_type or "loop" in src_type) and not cam_source)
-        start = st.button(":material/play_circle: Start Stream", type="primary",
-                          key="live_start", use_container_width=True,
-                          disabled=st.session_state["stream_running"] or no_source)
+    no_source = (("Video File" in src_type or "loop" in src_type) and not cam_source)
+    start = st.button(":material/play_circle: Start Stream", type="primary",
+                      key="live_start", use_container_width=True,
+                      disabled=st.session_state["stream_running"] or no_source)
 
-    with col_r:
+    with st.container():
         if not start and not st.session_state["stream_running"]:
-            st.info("Configure the source on the left and click **Start Stream**.")
+            st.info("Configure the source above and click **Start Stream**.")
             st.markdown("""
 **Supported camera sources**
 
@@ -858,10 +877,12 @@ with tab_live:
                     st.rerun()
 
             status_ph   = st.empty()
-            frame_ph    = st.empty()
-            metric_ph   = st.empty()
-            chart_ph    = st.empty()   # density + smoothed line chart
-            vtype_ph    = st.empty()   # vehicle type bar chart over time
+            vid_col, met_col = st.columns([3, 2])   # video beside its live metrics
+            frame_ph    = vid_col.empty()
+            metric_ph   = met_col.empty()
+            ch_col1, ch_col2 = st.columns(2)         # charts side by side
+            chart_ph    = ch_col1.empty()   # density + smoothed line chart
+            vtype_ph    = ch_col2.empty()   # vehicle type bar chart over time
             accuracy_ph = st.empty()   # live MAE / RMSE / MAPE
 
             # ── Flush stale __pycache__ FIRST so all new params are available ──
