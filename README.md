@@ -8,7 +8,7 @@ Real-time traffic density prediction from video using CNN-BiLSTM, YOLO11, and GN
 Video → YOLO11 detection → CNN-BiLSTM prediction → Kalman smoothing → Display
            ↓                        ↑
       ByteTrack IDs          Context encoder
-      (unique counts)       (weather + time)
+      (unique counts)        (weather + time)
 ```
 
 ### Models
@@ -54,4 +54,4 @@ opencv-python  ultralytics  streamlit  plotly  yt-dlp  pyyaml
 ```
 ## Deployment URL
 
-[https://traffic-flow-predictiongit-9htch7xmiunmntxv6esmju.streamlit.app/](https://traffic-flow-predictiongit-9htch7xmiunmntxv6esmju.streamlit.app/)
+[https://traffic-flow-predictiongit-7jsokhdenoixm8quspv3mh.streamlit.app/](https://traffic-flow-predictiongit-7jsokhdenoixm8quspv3mh.streamlit.app/)
